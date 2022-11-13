@@ -145,3 +145,19 @@ sys_wait2(void)
   argptr(0, (void*)&status, sizeof(status));
   return wait2(status);
 }
+
+
+int
+sys_setpriority(void)
+{
+  int priority;
+  
+  if(argint(0,&priority) < 0)
+  {
+    return -1;
+  }
+  else
+  {
+    return setpriority(priority);
+  }
+}

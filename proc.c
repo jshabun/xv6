@@ -325,16 +325,42 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+  int lowest;
   
-  for(;;){
+  for(;;)
+  {
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
+
+    //find process of lowest priority
+    lowest = 9999;
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    {
+
+      if (p->state == RUNNABLE && p->priority < lowest) 
+      {
+        lowest = p->priority;
+      }
+    }
+
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    {
       if(p->state != RUNNABLE)
         continue;
+
+      
+      if(p->priority != lowest)
+      {
+          if (p->priority > 0) 
+          {
+              p->priority--;
+          }
+          continue;
+      }
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -342,6 +368,7 @@ scheduler(void)
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
+      p->priority++; //cycle to next
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -350,9 +377,25 @@ scheduler(void)
       // It should have changed its p->state before coming back.
       c->proc = 0;
     }
-    release(&ptable.lock);
 
+    release(&ptable.lock);
   }
+}
+
+int setpriority(int p)
+{
+  if(p < 0 || p > 31)
+  {
+    return -1;
+  }
+
+  struct proc* myProc = myproc();
+
+  acquire(&ptable.lock);
+  myProc->priority = p;
+  release(&ptable.lock);
+
+  return 0;
 }
 
 // Enter scheduler.  Must hold only ptable.lock
